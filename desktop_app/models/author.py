@@ -1,10 +1,44 @@
 import configparser
 import os
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+import base64
 
 class Author:
+    """
+    Author class to manage author information and related operations.
+    Attributes:
+        full_name (str): Full name of the author.
+        short_name (str): Short name or nickname of the author.
+        email (str): Email address of the author.
+        phone (str): Phone number of the author.
+        mobile_phone (str): Mobile phone number of the author.
+        role (str): Role or title of the author.
+        extra_info1 (str): Additional information field 1.
+        extra_info2 (str): Additional information field 2.
+        extra_info3 (str): Additional information field 3.
+        extra_info4 (str): Additional information field 4.
+        extra_info5 (str): Additional information field 5.
+    Methods:
+        __init__(self, full_name, short_name, email, phone, mobile_phone, role, extra_info1, extra_info2, extra_info3, extra_info4, extra_info5):
+            Initializes an Author instance with the provided attributes.
+        to_dict(self):
+            Converts the Author instance to a dictionary format.
+        save(self, config):
+            Saves the Author instance to an INI file in the specified directory.
+        encrypt_signature(signature_path, password):
+            Encrypts the signature file using the provided password.
+        decrypt_signature(encrypted_signature_path, password, salt):
+            Decrypts the encrypted signature file using the provided password and salt.
+        load(short_name, config):
+            Loads an Author instance from an INI file based on the short name.
+        delete(short_name, config):
+            Deletes the Author's INI file, signature file, and salt file based on the short name.
+    """
     def __init__(self, full_name, short_name, email, phone, mobile_phone, role,
-                 extra_info1, extra_info2, extra_info3, extra_info4, extra_info5, password):
+                 extra_info1, extra_info2, extra_info3, extra_info4, extra_info5):
         self.full_name = full_name
         self.short_name = short_name
         self.email = email
@@ -16,15 +50,16 @@ class Author:
         self.extra_info3 = extra_info3
         self.extra_info4 = extra_info4
         self.extra_info5 = extra_info5
-        self.password = password
 
     def to_dict(self):
         return {
             'SignerFullName': self.full_name,
+            'SignerName': self.full_name,
             'SignerShortName': self.short_name,
             'SignerEmail': self.email,
             'SignerPhone': self.phone,
             'SignerMobilePhone': self.mobile_phone,
+            'SignerCell': self.mobile_phone,
             'SignerRole': self.role,
             'SignerExtraInfo1': self.extra_info1,
             'SignerExtraInfo2': self.extra_info2,
@@ -33,54 +68,69 @@ class Author:
             'SignerExtraInfo5': self.extra_info5
         }
 
+
+
     def save(self, config):
         signers_dir = config.get_signers_dir()
         ini_path = os.path.join(signers_dir, f"Signer-{self.short_name}.ini")
-        
+
         author_config = configparser.ConfigParser()
         author_config['Author'] = self.to_dict()
-        
-        with open(ini_path, 'w') as configfile:
+
+        with open(ini_path, 'w', encoding='utf-8') as configfile:
             author_config.write(configfile)
 
-    def encrypt_signature(self, signature_path, config):
-        signers_dir = config.get_signers_dir()
-        encrypted_path = os.path.join(signers_dir, f"Signer-{self.short_name}-Signatur.png")
-        
-        key = Fernet.generate_key()
-        fernet = Fernet(key)
-        
+    @staticmethod
+    def encrypt_signature(signature_path, password):
         with open(signature_path, 'rb') as file:
-            signature = file.read()
-        
-        encrypted_signature = fernet.encrypt(signature)
-        
-        with open(encrypted_path, 'wb') as file:
-            file.write(encrypted_signature)
-        
-        # Save the key securely (in this example, we're saving it in the INI file, but in a real-world scenario, 
-        # you might want to use a more secure method)
-        ini_path = os.path.join(signers_dir, f"Signer-{self.short_name}.ini")
-        author_config = configparser.ConfigParser()
-        author_config.read(ini_path)
-        author_config['Signature'] = {'key': key.decode()}
-        
-        with open(ini_path, 'w') as configfile:
-            author_config.write(configfile)
+            signature_data = file.read()
+
+        salt = os.urandom(16)
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+        fernet = Fernet(key)
+        encrypted_signature = fernet.encrypt(signature_data)
+        return salt, encrypted_signature
+
+    @staticmethod
+    def decrypt_signature(encrypted_signature_path, password, salt):
+        with open(encrypted_signature_path, 'rb') as file:
+            encrypted_signature = file.read()
+
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+        fernet = Fernet(key)
+        try:
+            decrypted_signature = fernet.decrypt(encrypted_signature)
+            return decrypted_signature
+        except Exception:
+            return None
 
     @staticmethod
     def load(short_name, config):
         signers_dir = config.get_signers_dir()
         ini_path = os.path.join(signers_dir, f"Signer-{short_name}.ini")
-        
+
         if not os.path.exists(ini_path):
             return None
-        
+
         author_config = configparser.ConfigParser()
-        author_config.read(ini_path)
-        
+        author_config.read(ini_path, encoding='utf-8')
+
         author_data = author_config['Author']
-        
+
         return Author(
             full_name=author_data['SignerFullName'],
             short_name=author_data['SignerShortName'],
@@ -92,42 +142,21 @@ class Author:
             extra_info2=author_data['SignerExtraInfo2'],
             extra_info3=author_data['SignerExtraInfo3'],
             extra_info4=author_data['SignerExtraInfo4'],
-            extra_info5=author_data['SignerExtraInfo5'],
-            password=''  # Password is not stored in the INI file for security reasons
+            extra_info5=author_data['SignerExtraInfo5']
         )
-
-    def decrypt_signature(self, config):
-        signers_dir = config.get_signers_dir()
-        encrypted_path = os.path.join(signers_dir, f"Signer-{self.short_name}-Signatur.png")
-        ini_path = os.path.join(signers_dir, f"Signer-{self.short_name}.ini")
-        
-        if not os.path.exists(encrypted_path) or not os.path.exists(ini_path):
-            return None
-        
-        author_config = configparser.ConfigParser()
-        author_config.read(ini_path)
-        
-        key = author_config['Signature']['key'].encode()
-        fernet = Fernet(key)
-        
-        with open(encrypted_path, 'rb') as file:
-            encrypted_signature = file.read()
-        
-        try:
-            decrypted_signature = fernet.decrypt(encrypted_signature)
-            return decrypted_signature
-        except:
-            return None
 
     @staticmethod
     def delete(short_name, config):
         signers_dir = config.get_signers_dir()
         ini_path = os.path.join(signers_dir, f"Signer-{short_name}.ini")
-        signature_path = os.path.join(signers_dir, f"Signer-{short_name}-Signatur.png")
-        
+        signature_path = os.path.join(signers_dir, f"Signer-{short_name}-Signature.png")
+        salt_path = os.path.join(signers_dir, f"Signer-{short_name}-Salt.bin")
+
         if os.path.exists(ini_path):
             os.remove(ini_path)
-        
+
         if os.path.exists(signature_path):
             os.remove(signature_path)
-            
+
+        if os.path.exists(salt_path):
+            os.remove(salt_path)

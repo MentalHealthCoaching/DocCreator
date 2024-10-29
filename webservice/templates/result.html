@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Verification Result{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Verification Result</h3>
+    </div>
+    <div class="card-body">
+        {% if result.valid %}
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">Verification Successful</h4>
+                <p>The document is authentic and has not been altered.</p>
+                <hr>
+                <p><strong>Author:</strong> {{ result.author }}</p>
+                <p><strong>Role:</strong> {{ result.role }}</p>
+                <p><strong>Email:</strong> {{ result.email }}</p>
+                <p><strong>Mobile Phone:</strong> {{ result.mobile_phone }}</p>
+                <p><strong>Creation Date:</strong> {{ result.date }}</p>
+                <p><strong>Signature Algorithm:</strong> {{ result.signature_algorithm }}</p>
+                <p><strong>Fingerprint (SHA-256):</strong></p>
+                <p class="small">{{ result.fingerprint }}</p>
+                <p><strong>Verification Timestamp:</strong> {{ result.verification_timestamp }}</p>
+            </div>
+        {% else %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">Verification Failed</h4>
+                <p>Document is not authentic or has been altered.</p>
+            </div>
+        {% endif %}
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Verify Another Document</a>
+    </div>
+</div>
+{% endblock %}

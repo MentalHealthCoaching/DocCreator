@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Upload PDF for Verification{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Upload PDF for Verification</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="formFile" class="form-label">Select PDF File</label>
+                <input class="form-control" type="file" id="formFile" name="file" accept=".pdf" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Verify Document</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

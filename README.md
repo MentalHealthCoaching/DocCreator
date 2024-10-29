@@ -36,17 +36,21 @@ DocCreator App is a comprehensive system for creating, managing, and verifying d
 
 3. Install the required dependencies:
    ```
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 4. Configure the application by editing `config.ini`:
    - Set paths for templates, signers, and key files
-   - Configure Nextcloud settings if needed
+   - Configure Nextcloud settings if needed (Not implemented)
 
 5. Generate encryption keys:
    ```
-   python key_generator.py
+   python keygen/keygen.py
    ```
+
+6. Create a directory for storing author signatures in root directory.
+
+7. Create a directory for storing output PDF files in root directory.
 
 ## Usage
 
@@ -54,7 +58,7 @@ DocCreator App is a comprehensive system for creating, managing, and verifying d
 
 1. Start the desktop application:
    ```
-   python main.py
+   doccreator
    ```
 
 2. Use the main menu to navigate between document creation and author management.
@@ -72,7 +76,7 @@ DocCreator App is a comprehensive system for creating, managing, and verifying d
 
 1. Start the web service:
    ```
-   python web_service.py
+   python webservice/app.py
    ```
 
 2. Access the verification page through a web browser.

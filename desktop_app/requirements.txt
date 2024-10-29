@@ -3,4 +3,6 @@ python-docx
 docx2pdf
 PyPDF2
 cryptography
-flask
+Pillow
+Flask
+reportlab

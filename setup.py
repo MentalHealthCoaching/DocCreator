@@ -9,9 +9,10 @@ setup(
         'python-docx',
         'docx2pdf',
         'PyPDF2',
-        'reportlab',
         'cryptography',
         'Pillow',
+        'Flask',
+        'reportlab',
     ],
     entry_points={
         'console_scripts': [

@@ -1,8 +1,12 @@
 [Paths]
-templates_dir = templates/
-signers_dir = signers/
+templates_dir = templates
+signers_dir = signers
 public_key = keys/public_key.pem
 private_key = keys/private_key.pem
+output_dir = output
+
+[Verification]
+url = http://localhost:5000
 
 [Nextcloud]
 enabled = false
